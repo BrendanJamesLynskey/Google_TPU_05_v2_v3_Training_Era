@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google TPUs 05 &mdash; v2 &amp; v3, the Training Era</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg-primary:#0a0a0a; --bg-card:#0d1117; --bg-code:#161b22; --text-primary:#e6edf3; --text-secondary:#8b949e; --accent:#4285F4; --accent-dim:#4285F444; --accent-glow:#4285F433; --accent-2:#EA4335; --accent-3:#FBBC04; --accent-4:#34A853; --border:#21262d; --font-display:'Space Grotesk',sans-serif; --font-mono:'JetBrains Mono','Fira Code',monospace; --font-body:'Inter',sans-serif; --max-width:900px; }
+        *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+        html { scroll-behavior:smooth; }
+        body { background:var(--bg-primary); color:var(--text-primary); font-family:var(--font-body); font-size:17px; line-height:1.7; overflow-x:hidden; }
+        .hero { min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:2rem 1.5rem; text-align:center; position:relative; }
+        .hero::before { content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:700px; height:600px; background:radial-gradient(circle,var(--accent-glow) 0%,transparent 70%); pointer-events:none; z-index:0; }
+        .hero > * { position:relative; z-index:1; }
+        .series-label { font-family:var(--font-mono); font-size:0.85rem; color:var(--accent); letter-spacing:0.15em; text-transform:uppercase; margin-bottom:1rem; }
+        .hero h1 { font-family:var(--font-display); font-size:clamp(2rem,5vw,3.2rem); font-weight:700; line-height:1.2; margin-bottom:1rem; }
+        .hero h1 .accent { color:var(--accent); }
+        .hero .subtitle { font-size:1.1rem; color:var(--text-secondary); max-width:640px; margin-bottom:2rem; }
+        .tags { display:flex; flex-wrap:wrap; gap:0.5rem; justify-content:center; margin-bottom:2.5rem; }
+        .tag { font-family:var(--font-mono); font-size:0.75rem; padding:0.25rem 0.75rem; border-radius:999px; border:1px solid var(--accent); color:var(--accent); background:var(--accent-dim); }
+        .pipeline { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:0.25rem; margin-bottom:1rem; max-width:var(--max-width); }
+        .pipeline-step { font-family:var(--font-mono); font-size:0.7rem; padding:0.3rem 0.7rem; background:var(--bg-card); border:1px solid var(--border); border-radius:4px; color:var(--text-secondary); }
+        .pipeline-arrow { color:var(--accent); font-size:0.9rem; font-weight:700; }
+        .slide { min-height:100vh; max-width:var(--max-width); margin:0 auto; padding:4rem 1.5rem; position:relative; display:flex; flex-direction:column; justify-content:center; }
+        .slide-number { font-family:var(--font-display); font-size:5rem; font-weight:700; color:var(--accent-dim); position:absolute; top:2rem; right:1.5rem; line-height:1; }
+        .slide h2 { font-family:var(--font-display); font-size:1.9rem; font-weight:700; color:var(--accent); margin-bottom:1.5rem; line-height:1.25; }
+        .slide h3 { font-family:var(--font-display); font-size:1.3rem; font-weight:600; color:var(--text-primary); margin-top:1.5rem; margin-bottom:0.75rem; }
+        .slide p { margin-bottom:1rem; color:var(--text-secondary); }
+        .slide p strong { color:var(--text-primary); }
+        .slide ul, .slide ol { margin-bottom:1rem; padding-left:1.5rem; color:var(--text-secondary); }
+        .slide li { margin-bottom:0.4rem; }
+        .slide li strong { color:var(--text-primary); }
+        .table-wrap { overflow-x:auto; margin:1.25rem 0; border-radius:8px; border:1px solid var(--border); }
+        table { width:100%; border-collapse:collapse; font-size:0.9rem; }
+        th { background:var(--bg-code); color:var(--accent); font-weight:600; text-align:left; padding:0.75rem 1rem; border-bottom:1px solid var(--border); font-family:var(--font-display); white-space:nowrap; }
+        td { padding:0.6rem 1rem; border-bottom:1px solid var(--border); color:var(--text-secondary); vertical-align:top; }
+        tr:last-child td { border-bottom:none; }
+        tr:nth-child(even) td { background:rgba(13,17,23,0.5); }
+        .diagram-grid { display:grid; gap:0.75rem; margin:1.5rem 0; padding:1.5rem; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; }
+        .diagram-grid.cols-2 { grid-template-columns:1fr 1fr; }
+        .diagram-grid.cols-3 { grid-template-columns:1fr 1fr 1fr; }
+        .diagram-panel { padding:1rem; background:var(--bg-code); border:1px solid var(--border); border-radius:6px; }
+        .diagram-panel.accent-border { border-left:3px solid var(--accent); }
+        .diagram-panel.r { border-left:3px solid var(--accent-2); }
+        .diagram-panel.y { border-left:3px solid var(--accent-3); }
+        .diagram-panel.g { border-left:3px solid var(--accent-4); }
+        .diagram-panel h4 { font-family:var(--font-display); font-size:1rem; color:var(--accent); margin-bottom:0.5rem; }
+        .diagram-panel.r h4 { color:var(--accent-2); }
+        .diagram-panel.y h4 { color:var(--accent-3); }
+        .diagram-panel.g h4 { color:var(--accent-4); }
+        .diagram-panel p, .diagram-panel ul { font-size:0.9rem; }
+        .callout { background:var(--bg-card); border-left:3px solid var(--accent); border-radius:0 8px 8px 0; padding:1rem 1.25rem; margin:1.25rem 0; }
+        .callout p { margin-bottom:0; }
+        .callout .callout-label { font-family:var(--font-mono); font-size:0.75rem; color:var(--accent); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.3rem; }
+        .canvas-wrap { background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:1rem; margin:1.25rem 0; overflow-x:auto; }
+        .canvas-wrap canvas, .canvas-wrap svg { display:block; margin:0 auto; max-width:100%; }
+        .contents-list { list-style:none; padding-left:0; counter-reset:contents; }
+        .contents-list li { counter-increment:contents; padding:0.6rem 0; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:1rem; }
+        .contents-list li:last-child { border-bottom:none; }
+        .contents-list li::before { content:counter(contents,decimal-leading-zero); font-family:var(--font-mono); font-size:0.85rem; color:var(--accent); min-width:2rem; }
+        .contents-list a { color:var(--text-primary); text-decoration:none; }
+        .contents-list a:hover { color:var(--accent); }
+        .footer { text-align:center; padding:3rem 1.5rem; color:var(--text-secondary); font-size:0.85rem; border-top:1px solid var(--border); max-width:var(--max-width); margin:0 auto; }
+        .footer a { color:var(--accent); text-decoration:none; }
+        @media (max-width:640px) { .slide { padding:3rem 1rem; min-height:auto; } .slide-number { font-size:3rem; top:1.5rem; right:1rem; } .slide h2 { font-size:1.5rem; } .diagram-grid.cols-2,.diagram-grid.cols-3 { grid-template-columns:1fr; } .hero h1 { font-size:1.8rem; } table { font-size:0.78rem; } }
+    </style>
+</head>
+<body>
+
+<header class="hero">
+    <div class="series-label">Google TPUs Series &mdash; Presentation 05</div>
+    <h1>TPU <span class="accent">v2 &amp; v3</span> &mdash; The Training Era Begins</h1>
+    <p class="subtitle">2017&ndash;2018: HBM arrives, bfloat16 is invented, the chip grows two TensorCores, the pod becomes a 2D torus, and Google has to rebuild its datacenter cooling.</p>
+    <div class="tags">
+        <span class="tag">v2 (2017)</span><span class="tag">v3 (2018)</span>
+        <span class="tag">bf16</span><span class="tag">HBM</span>
+        <span class="tag">2D torus</span><span class="tag">ICI</span>
+        <span class="tag">Liquid Cooling</span>
+    </div>
+    <div class="pipeline">
+        <span class="pipeline-step">v1 lessons</span><span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">+HBM</span><span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">+bfloat16</span><span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">+ICI</span><span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">+vector unit</span><span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">v2 (256-chip)</span><span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">v3 (1024-chip, liquid)</span>
+    </div>
+</header>
+
+<section class="slide" id="slide-00">
+    <div class="slide-number">00</div>
+    <h2>Topics We'll Cover</h2>
+    <ul class="contents-list">
+        <li><a href="#slide-01">Why v1 Couldn't Train</a></li>
+        <li><a href="#slide-02">The v2 Block Diagram</a></li>
+        <li><a href="#slide-03">bfloat16 &mdash; Google Brain's Numeric</a></li>
+        <li><a href="#slide-04">Two TensorCores Per Chip</a></li>
+        <li><a href="#slide-05">HBM Arrives</a></li>
+        <li><a href="#slide-06">ICI &mdash; The Inter-Chip Interconnect</a></li>
+        <li><a href="#slide-07">The 2D Torus Pod</a></li>
+        <li><a href="#slide-08">From v2 to v3 &mdash; The "Tick" Generation</a></li>
+        <li><a href="#slide-09">Liquid Cooling &mdash; The First Time</a></li>
+        <li><a href="#slide-10">Workloads &mdash; BERT, T5, GNMT</a></li>
+        <li><a href="#slide-11">What v2/v3 Got Right And Wrong</a></li>
+        <li><a href="#slide-12">Cheat Sheet</a></li>
+    </ul>
+</section>
+
+<section class="slide" id="slide-01">
+    <div class="slide-number">01</div>
+    <h2>Why v1 Couldn't Train</h2>
+    <p>By 2016 the bottleneck at Google had moved. Inference was solved &mdash; v1 was running tens of thousands of inferences per second per chip. The new constraint was <strong>training time</strong>: weeks on big GPU clusters for each new model rev. The team's question shifted from "what does an inference ASIC look like?" to "what does a training supercomputer look like?".</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel r">
+            <h4>What v1 lacked for training</h4>
+            <ul>
+                <li><strong>No floating point.</strong> Gradients have wide dynamic range; INT8 won't accumulate them stably.</li>
+                <li><strong>No vector unit.</strong> Optimisers (SGD, Adam, RMSProp) need elementwise ops, masks, scales. v1 ran these on the host.</li>
+                <li><strong>No chip-to-chip link.</strong> Training a model bigger than one chip requires gradient all-reduce; via PCIe-and-host that's hopeless.</li>
+                <li><strong>34 GB/s of DDR3.</strong> Not enough to feed a chip <em>and</em> spill activations for backprop.</li>
+                <li><strong>Inference precision.</strong> Even if the previous problems vanished, INT8 forward passes throw away too much information for gradient back-propagation.</li>
+            </ul>
+        </div>
+        <div class="diagram-panel g">
+            <h4>What v2 needs to add</h4>
+            <ul>
+                <li>A floating-point matmul format that holds gradients well.</li>
+                <li>A real per-chip vector unit.</li>
+                <li>HBM (much more bandwidth and capacity).</li>
+                <li>A custom inter-chip interconnect that bypasses the host.</li>
+                <li>A pod organisation so that thousands of chips can act as one machine.</li>
+                <li>An accumulator strategy that keeps long matmuls numerically stable.</li>
+            </ul>
+        </div>
+    </div>
+
+    <p>Each of those features is a major silicon and system-design change. v2 is not a v1 refresh; it is a clean redesign with the same DNA.</p>
+</section>
+
+<section class="slide" id="slide-02">
+    <div class="slide-number">02</div>
+    <h2>The v2 Block Diagram</h2>
+    <p>v2 is two-cores-on-a-chip. Each <em>TensorCore</em> has its own MXU, vector unit, scalar unit, and slice of HBM. They run independently and can synchronise via the on-chip network.</p>
+
+    <div class="canvas-wrap">
+        <svg viewBox="0 0 800 400" width="800" height="400" xmlns="http://www.w3.org/2000/svg">
+            <style>
+                .blk { fill:#161b22; stroke:#21262d; stroke-width:1; }
+                .blk.tc { fill:rgba(66,133,244,0.10); stroke:#4285F4; stroke-width:2; }
+                .blk.mxu { fill:rgba(66,133,244,0.30); stroke:#4285F4; stroke-width:1.5; }
+                .blk.vec { fill:rgba(52,168,83,0.18); stroke:#34A853; }
+                .blk.sca { fill:rgba(251,188,4,0.18); stroke:#FBBC04; }
+                .blk.hbm { fill:rgba(234,67,53,0.18); stroke:#EA4335; }
+                .blk.ici { fill:rgba(210,168,255,0.18); stroke:#d2a8ff; }
+                .lbl { fill:#e6edf3; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:12px; text-anchor:middle; }
+                .sublbl { fill:#8b949e; font-family:'JetBrains Mono',monospace; font-size:10px; text-anchor:middle; }
+            </style>
+            <!-- TensorCore 0 -->
+            <rect class="blk tc" x="20" y="50" width="370" height="200" rx="8"/>
+            <text class="lbl" x="205" y="70">TensorCore 0</text>
+            <rect class="blk mxu" x="40" y="90" width="170" height="90" rx="6"/>
+            <text class="lbl" x="125" y="125">MXU</text>
+            <text class="sublbl" x="125" y="145">128×128 bf16</text>
+            <text class="sublbl" x="125" y="160">22.5 TFLOPS</text>
+            <rect class="blk vec" x="220" y="90" width="160" height="50" rx="6"/>
+            <text class="lbl" x="300" y="115">Vector Unit</text>
+            <text class="sublbl" x="300" y="130">elementwise / reduce</text>
+            <rect class="blk sca" x="220" y="150" width="160" height="40" rx="6"/>
+            <text class="lbl" x="300" y="172">Scalar Unit</text>
+            <text class="sublbl" x="300" y="186">control flow / addressing</text>
+            <rect class="blk" x="40" y="195" width="340" height="40" rx="6"/>
+            <text class="lbl" x="210" y="217">Vector Memory (VMEM scratchpad)</text>
+            <!-- TensorCore 1 (mirror) -->
+            <rect class="blk tc" x="410" y="50" width="370" height="200" rx="8"/>
+            <text class="lbl" x="595" y="70">TensorCore 1</text>
+            <rect class="blk mxu" x="430" y="90" width="170" height="90" rx="6"/>
+            <text class="lbl" x="515" y="125">MXU</text>
+            <text class="sublbl" x="515" y="145">128×128 bf16</text>
+            <text class="sublbl" x="515" y="160">22.5 TFLOPS</text>
+            <rect class="blk vec" x="610" y="90" width="160" height="50" rx="6"/>
+            <text class="lbl" x="690" y="115">Vector Unit</text>
+            <rect class="blk sca" x="610" y="150" width="160" height="40" rx="6"/>
+            <text class="lbl" x="690" y="172">Scalar Unit</text>
+            <rect class="blk" x="430" y="195" width="340" height="40" rx="6"/>
+            <text class="lbl" x="600" y="217">Vector Memory (VMEM scratchpad)</text>
+            <!-- HBM -->
+            <rect class="blk hbm" x="20" y="270" width="370" height="50" rx="6"/>
+            <text class="lbl" x="205" y="293">HBM stack 0 — 8 GiB @ 300 GB/s</text>
+            <rect class="blk hbm" x="410" y="270" width="370" height="50" rx="6"/>
+            <text class="lbl" x="595" y="293">HBM stack 1 — 8 GiB @ 300 GB/s</text>
+            <!-- ICI -->
+            <rect class="blk ici" x="20" y="340" width="760" height="40" rx="6"/>
+            <text class="lbl" x="400" y="362">ICI — 4 bidirectional links to neighbours (north / south / east / west) — 2D torus</text>
+        </svg>
+    </div>
+
+    <p>One chip = two TensorCores; each TensorCore has compute, scratchpad, and its own slice of HBM. ICI sits at the bottom and connects to four neighbours.</p>
+</section>
+
+<section class="slide" id="slide-03">
+    <div class="slide-number">03</div>
+    <h2>bfloat16 &mdash; Google Brain's Numeric</h2>
+    <p>bfloat16 is the most quietly influential numeric format in modern computing. It was invented inside Google Brain specifically so that mixed-precision training would <em>just work</em>, and is now native in every modern AI chip.</p>
+
+    <div class="diagram-grid cols-3">
+        <div class="diagram-panel accent-border">
+            <h4>FP32</h4>
+            <ul>
+                <li>1 sign + 8 exp + 23 mantissa.</li>
+                <li>Range ~10<sup>&plusmn;38</sup>.</li>
+                <li>Standard since IEEE 754-1985.</li>
+            </ul>
+        </div>
+        <div class="diagram-panel y">
+            <h4>FP16 (IEEE half)</h4>
+            <ul>
+                <li>1 sign + 5 exp + 10 mantissa.</li>
+                <li>Range only ~10<sup>&plusmn;5</sup>.</li>
+                <li>Underflows / overflows on gradients without loss-scaling.</li>
+            </ul>
+        </div>
+        <div class="diagram-panel g">
+            <h4>bfloat16 (Google)</h4>
+            <ul>
+                <li>1 sign + 8 exp + 7 mantissa.</li>
+                <li>Range identical to FP32 (~10<sup>&plusmn;38</sup>).</li>
+                <li>Conversion to/from FP32 is just truncation.</li>
+                <li>Works without loss-scaling on most networks.</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3>Why bf16's range matters more than its precision</h3>
+    <p>Gradients have an enormous dynamic range &mdash; some weights see updates of 10<sup>-7</sup>, some of 10<sup>-1</sup>. FP16's 5-bit exponent can't span that. bf16 keeps FP32's exponent and just throws away the bottom 16 bits of the mantissa &mdash; giving up precision (where neural nets are robust) to keep range (where they aren't). The tradeoff turns out to be exactly the right one.</p>
+
+    <h3>How the TPU MXU uses it</h3>
+    <ul>
+        <li><strong>Multiplications</strong> are done in bf16.</li>
+        <li><strong>Accumulation</strong> is done in FP32 inside the systolic PEs.</li>
+        <li>This is the exact pattern that NVIDIA later named "mixed precision" with their first tensor cores in 2017 (Volta) using FP16; bf16 versions arrive in Ampere (2020).</li>
+    </ul>
+
+    <div class="callout">
+        <div class="callout-label">A standard born from one chip</div>
+        <p>bf16 went from "Google internal format" in 2017 to JEDEC and IEEE adoption by 2020. NVIDIA, Intel (with their Cooper Lake AVX-512 BF16 instructions), ARM (with the BFloat16 extension to ARMv8.6), AMD &mdash; all support it. The TPU forced a numeric standard on the rest of the industry.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-04">
+    <div class="slide-number">04</div>
+    <h2>Two TensorCores Per Chip</h2>
+    <p>v2 is the first TPU with multiple cores on one die. The "TensorCore" terminology that appears later in NVIDIA's marketing is unrelated &mdash; in TPU language a TensorCore is a complete sub-chip with its own compute, scratchpad, and HBM partition.</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel accent-border">
+            <h4>What's in a TensorCore</h4>
+            <ul>
+                <li><strong>One MXU</strong> &mdash; 128&times;128 bf16 weight-stationary systolic.</li>
+                <li><strong>One vector unit</strong> &mdash; SIMD-style elementwise on bf16 / FP32, with reductions.</li>
+                <li><strong>One scalar unit</strong> &mdash; integer arithmetic, addresses, loop counters.</li>
+                <li><strong>VMEM</strong> &mdash; 32 MiB (v2) software-managed scratchpad for activations.</li>
+                <li><strong>~22.5 TFLOPS bf16</strong> per TensorCore.</li>
+            </ul>
+        </div>
+        <div class="diagram-panel y">
+            <h4>Why two, not four (yet)</h4>
+            <ul>
+                <li>Die-area budget at 16&nbsp;nm. Two cores fits a ~625 mm&sup2; die comfortably.</li>
+                <li>Two HBM stacks per chip &mdash; one per core &mdash; matches package routing.</li>
+                <li>Easy parallelism story for the compiler: model-parallel inside chip, data-parallel across chips.</li>
+                <li>v3 doubles the MXU count <em>per core</em> (4 MXUs/chip) instead of doubling cores &mdash; same compute uplift, less floorplan churn.</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3>The vector unit</h3>
+    <p>v2's vector unit is the first part of the chip that's not for matmul. Softmax, layer-norm, optimiser updates (Adam moment estimates, learning-rate schedules), gradient clipping, masking &mdash; all of these now run on-chip. The host CPU shrinks back to a control-plane role.</p>
+
+    <h3>The scalar unit</h3>
+    <p>Every chip has one. Manages instruction-stream sequencing, address computation, masks, control flow that doesn't make sense to vectorise. It is also the chip's "VLIW issue logic" &mdash; the static schedule emitted by XLA is consumed by the scalar unit and dispatched to MXU and vector unit each cycle.</p>
+</section>
+
+<section class="slide" id="slide-05">
+    <div class="slide-number">05</div>
+    <h2>HBM Arrives</h2>
+    <p>The single biggest change vs v1. v2 ships with two HBM stacks per chip &mdash; one per TensorCore.</p>
+
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th></th><th>v1 (DDR3)</th><th>v2 (HBM)</th><th>v3 (HBM)</th></tr></thead>
+            <tbody>
+                <tr><td>Capacity</td><td>8 GiB</td><td>16 GiB</td><td>32 GiB</td></tr>
+                <tr><td>Bandwidth</td><td>~34 GB/s</td><td>~600 GB/s</td><td>~900 GB/s</td></tr>
+                <tr><td>Stacks</td><td>2 channels DDR3-2133</td><td>2 stacks HBM (1 per core)</td><td>2 stacks HBM</td></tr>
+                <tr><td>Bandwidth uplift vs v1</td><td>1.0&times;</td><td><strong>~17.6&times;</strong></td><td>~26.5&times;</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>What HBM bandwidth unlocks</h3>
+    <ul>
+        <li><strong>Activation spilling for backprop.</strong> Training requires keeping activations from the forward pass to compute gradients on the backward pass. v1's 24 MiB Unified Buffer can't hold them; HBM at 600 GB/s can.</li>
+        <li><strong>Larger effective batch sizes.</strong> Bandwidth-bound workloads stop being bandwidth-bound, freeing the compiler to choose tile sizes that match the MXU's natural shape.</li>
+        <li><strong>Embedding tables.</strong> Recommendation models rely on huge sparse embedding lookups; HBM makes them serviceable.</li>
+        <li><strong>Optimiser state.</strong> Adam keeps two FP32 moment estimates per parameter &mdash; 2&times; the model size. HBM gives you somewhere to put them.</li>
+    </ul>
+
+    <div class="callout">
+        <div class="callout-label">Cost reality</div>
+        <p>HBM is, gram for gram, the most expensive memory in production. In 2017 it was 6&ndash;10&times; the price per GB of GDDR5. Putting it on every TPU permanently changed the chip's cost structure. Every TPU since has reflected the trade: more die area for HBM I/O than for any other interface, and increasing HBM stacks per chip generation by generation.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-06">
+    <div class="slide-number">06</div>
+    <h2>ICI &mdash; The Inter-Chip Interconnect</h2>
+    <p>The other transformative addition. ICI is Google's custom <em>chip-to-chip</em> link, sitting outside the PCIe path. It is the thing that turns a chip into a pod.</p>
+
+    <h3>ICI v2 specs</h3>
+    <ul>
+        <li><strong>4 bidirectional links per chip</strong>, one to each cardinal-direction neighbour (north, south, east, west) for 2D-torus connectivity.</li>
+        <li>~62 GB/s aggregate per chip (HotChips 2020 figures; per-link bandwidth in the tens of GB/s range).</li>
+        <li>Custom Google SerDes &mdash; not InfiniBand, not Ethernet, not NVLink. Co-designed with the routing fabric for low-latency torus all-reduce.</li>
+        <li>Hardware all-reduce primitives in the link controller, not the chip core.</li>
+    </ul>
+
+    <h3>Why a custom link?</h3>
+    <div class="diagram-grid cols-3">
+        <div class="diagram-panel y">
+            <h4>InfiniBand cost</h4>
+            <p>Per-port silicon (HCA, switch ASIC) is a real cost adder. PCIe-attached HCAs add latency and contend with host traffic.</p>
+        </div>
+        <div class="diagram-panel r">
+            <h4>Ethernet latency</h4>
+            <p>RoCE has improved but switch-traversal latency is still 1&ndash;2&nbsp;&mu;s. Inside a torus you want sub-100 ns per hop.</p>
+        </div>
+        <div class="diagram-panel g">
+            <h4>NVLink unavailable</h4>
+            <p>NVLink is NVIDIA proprietary and only between NVIDIA chips. Even if Google had wanted it, the scale-up to 256 / 1024 chips wasn't there in 2017.</p>
+        </div>
+    </div>
+
+    <p>ICI is the <em>defining</em> component of a TPU pod. NVIDIA later builds NVLink-Switch / NVL72 to compete; AMD's Infinity Fabric is its parallel. As of 2026 ICI is in its 7th generation.</p>
+</section>
+
+<section class="slide" id="slide-07">
+    <div class="slide-number">07</div>
+    <h2>The 2D Torus Pod</h2>
+    <p>v2 ships with a fixed pod shape: <strong>256 chips arranged in a 16&times;16 2D torus</strong>, 4 chips per board, 16 boards per rack-scale pod.</p>
+
+    <div class="canvas-wrap">
+        <svg viewBox="0 0 600 380" width="600" height="380" xmlns="http://www.w3.org/2000/svg">
+            <style>
+                .chip { fill:#161b22; stroke:#21262d; stroke-width:1; }
+                .chip.acc { fill:rgba(66,133,244,0.4); stroke:#4285F4; }
+                .lnk { stroke:#4285F4; stroke-width:1.4; fill:none; }
+                .wrap { stroke:#34A853; stroke-width:1.6; fill:none; stroke-dasharray:5 4; }
+                .lbl { fill:#e6edf3; font-family:'Space Grotesk',sans-serif; font-size:13px; }
+                .sublbl { fill:#8b949e; font-family:'JetBrains Mono',monospace; font-size:11px; }
+            </style>
+            <text x="300" y="22" class="lbl" text-anchor="middle">v2 — 16×16 2D torus (subset shown 6×6)</text>
+            <!-- 6x6 grid -->
+            <g>
+                <!-- generate 6x6 = 36 chips -->
+                <!-- positions x=80..480 step 80, y=50..400 step 50 (5 step) -->
+                <!-- I'll write them inline -->
+                <!-- row 0 -->
+                <g><rect class="chip" x="100" y="60" width="40" height="40" rx="4"/><rect class="chip" x="160" y="60" width="40" height="40" rx="4"/><rect class="chip acc" x="220" y="60" width="40" height="40" rx="4"/><rect class="chip" x="280" y="60" width="40" height="40" rx="4"/><rect class="chip" x="340" y="60" width="40" height="40" rx="4"/><rect class="chip" x="400" y="60" width="40" height="40" rx="4"/></g>
+                <!-- row 1..5 -->
+                <g><rect class="chip" x="100" y="120" width="40" height="40" rx="4"/><rect class="chip acc" x="160" y="120" width="40" height="40" rx="4"/><rect class="chip" x="220" y="120" width="40" height="40" rx="4"/><rect class="chip" x="280" y="120" width="40" height="40" rx="4"/><rect class="chip" x="340" y="120" width="40" height="40" rx="4"/><rect class="chip" x="400" y="120" width="40" height="40" rx="4"/></g>
+                <g><rect class="chip" x="100" y="180" width="40" height="40" rx="4"/><rect class="chip" x="160" y="180" width="40" height="40" rx="4"/><rect class="chip" x="220" y="180" width="40" height="40" rx="4"/><rect class="chip" x="280" y="180" width="40" height="40" rx="4"/><rect class="chip acc" x="340" y="180" width="40" height="40" rx="4"/><rect class="chip" x="400" y="180" width="40" height="40" rx="4"/></g>
+                <g><rect class="chip" x="100" y="240" width="40" height="40" rx="4"/><rect class="chip" x="160" y="240" width="40" height="40" rx="4"/><rect class="chip" x="220" y="240" width="40" height="40" rx="4"/><rect class="chip acc" x="280" y="240" width="40" height="40" rx="4"/><rect class="chip" x="340" y="240" width="40" height="40" rx="4"/><rect class="chip" x="400" y="240" width="40" height="40" rx="4"/></g>
+                <g><rect class="chip" x="100" y="300" width="40" height="40" rx="4"/><rect class="chip" x="160" y="300" width="40" height="40" rx="4"/><rect class="chip" x="220" y="300" width="40" height="40" rx="4"/><rect class="chip" x="280" y="300" width="40" height="40" rx="4"/><rect class="chip" x="340" y="300" width="40" height="40" rx="4"/><rect class="chip" x="400" y="300" width="40" height="40" rx="4"/></g>
+            </g>
+            <!-- horizontal links -->
+            <g>
+                <line class="lnk" x1="140" y1="80" x2="160" y2="80"/><line class="lnk" x1="200" y1="80" x2="220" y2="80"/><line class="lnk" x1="260" y1="80" x2="280" y2="80"/><line class="lnk" x1="320" y1="80" x2="340" y2="80"/><line class="lnk" x1="380" y1="80" x2="400" y2="80"/>
+                <line class="lnk" x1="140" y1="140" x2="400" y2="140" stroke-dasharray="2 4"/>
+                <line class="lnk" x1="140" y1="200" x2="400" y2="200" stroke-dasharray="2 4"/>
+                <line class="lnk" x1="140" y1="260" x2="400" y2="260" stroke-dasharray="2 4"/>
+                <line class="lnk" x1="140" y1="320" x2="400" y2="320"/>
+            </g>
+            <!-- vertical links -->
+            <g>
+                <line class="lnk" x1="120" y1="100" x2="120" y2="320"/>
+                <line class="lnk" x1="180" y1="100" x2="180" y2="320"/>
+                <line class="lnk" x1="240" y1="100" x2="240" y2="320"/>
+                <line class="lnk" x1="300" y1="100" x2="300" y2="320"/>
+                <line class="lnk" x1="360" y1="100" x2="360" y2="320"/>
+                <line class="lnk" x1="420" y1="100" x2="420" y2="320"/>
+            </g>
+            <!-- wrap-around links to make it a torus -->
+            <path class="wrap" d="M 120 60 q -20 -25 0 -45 q 410 0 320 45"/>
+            <path class="wrap" d="M 100 80 q -25 20 -45 0 q 0 305 45 240"/>
+            <text x="300" y="370" class="sublbl" text-anchor="middle">dashed links represent torus wrap-around</text>
+        </svg>
+    </div>
+
+    <h3>Why a 2D torus?</h3>
+    <ul>
+        <li><strong>Fixed degree.</strong> Every chip has exactly 4 ICI links, regardless of pod size. Cabling is identical for every chip.</li>
+        <li><strong>Wrap-around halves the diameter.</strong> A 16&times;16 torus has diameter 16; a 16&times;16 mesh has diameter 30.</li>
+        <li><strong>All-reduce is <em>free</em>.</strong> A bandwidth-optimal all-reduce on a 2D torus is just a 2-pass row-then-column reduction. The hardware has dedicated paths for this.</li>
+        <li><strong>Failure isolation.</strong> Any single chip failure can be routed around with at most a 2-hop detour.</li>
+    </ul>
+
+    <p>The pod aggregate at v2 is <strong>~11.5 PFLOPS bf16</strong>, with 4 TiB of HBM. At v3 the pod is 1024 chips (32&times;32 torus) and aggregates to <strong>over 100 PFLOPS bf16</strong>.</p>
+</section>
+
+<section class="slide" id="slide-08">
+    <div class="slide-number">08</div>
+    <h2>From v2 to v3 &mdash; The "Tick" Generation</h2>
+    <p>v3 is the same 16&nbsp;nm node as v2 but everything inside is doubled. Two MXUs per TensorCore (instead of one), 32 GiB HBM (instead of 16), 1024-chip pod (instead of 256), faster clock.</p>
+
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th></th><th>v2</th><th>v3</th></tr></thead>
+            <tbody>
+                <tr><td>Process</td><td>16&nbsp;nm</td><td>16&nbsp;nm</td></tr>
+                <tr><td>TensorCores per chip</td><td>2</td><td>2</td></tr>
+                <tr><td>MXUs per TensorCore</td><td>1</td><td><strong>2</strong></td></tr>
+                <tr><td>MXU dim</td><td>128&times;128</td><td>128&times;128</td></tr>
+                <tr><td>Per-chip bf16</td><td>45 TFLOPS</td><td><strong>123 TFLOPS</strong></td></tr>
+                <tr><td>HBM</td><td>16 GiB</td><td><strong>32 GiB</strong></td></tr>
+                <tr><td>HBM BW</td><td>~600 GB/s</td><td><strong>~900 GB/s</strong></td></tr>
+                <tr><td>Pod size</td><td>256 chips (16&times;16)</td><td><strong>1024 chips (32&times;32)</strong></td></tr>
+                <tr><td>Cooling</td><td>Air</td><td><strong>Liquid</strong></td></tr>
+                <tr><td>Pod aggregate</td><td>~11.5 PFLOPS</td><td><strong>~126 PFLOPS</strong></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>Why doubling MXUs per core, instead of clock or PE count?</h3>
+    <p>Doubling the systolic array from 128&times;128 to 256&times;256 would <em>quadruple</em> the PE count and require redoing the entire weight-FIFO and activation-stream paths. Going from 1 to 2 MXUs per core is a <em>copy-and-paste</em> operation in the floorplan. It also lets the compiler issue two matmuls in parallel within a TensorCore &mdash; useful for attention's QK<sup>T</sup> and softmax(.) V operations, which can run side by side.</p>
+
+    <p>v3's per-chip bf16 (123 TFLOPS) is 2.7&times; v2's (45 TFLOPS) &mdash; doubled MXUs plus a higher clock plus better issue rates. Pod-level the jump is even larger because the pod itself grew 4&times; in chip count.</p>
+</section>
+
+<section class="slide" id="slide-09">
+    <div class="slide-number">09</div>
+    <h2>Liquid Cooling &mdash; The First Time</h2>
+    <p>v3 was the first liquid-cooled accelerator at hyperscale. Per-chip TDP estimates put v3 at 200&ndash;250 W; eight chips per board, 32 boards per rack means rack-level power dissipation past anything air-cooled would tolerate.</p>
+
+    <h3>The cooling stack</h3>
+    <ul>
+        <li><strong>Cold plate</strong> directly on each TPU die.</li>
+        <li>Coolant manifold across the board, one supply / return per rack.</li>
+        <li>Coolant distribution unit (CDU) per row of racks.</li>
+        <li>Facility chilled-water loop or evaporative tower as the heat sink.</li>
+    </ul>
+
+    <p>This was a major datacenter operational change. Google's existing fleet was air-cooled; v3 required a parallel liquid-coolant infrastructure that did not exist before. By 2018 several Google datacenters were dedicated TPU sites built specifically around the new cooling.</p>
+
+    <div class="callout">
+        <div class="callout-label">Why this matters in 2025</div>
+        <p>Every modern AI accelerator is now liquid-cooled at the rack level &mdash; NVIDIA NVL72, AMD MI300X clusters, AWS Trainium2 racks. Google was first by 5+ years. The expertise transfers up the stack: when Ironwood pods land in 2025 with 9,216 chips dissipating ~5.5 MW each, the cooling story is a refinement, not a redesign.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-10">
+    <div class="slide-number">10</div>
+    <h2>Workloads &mdash; BERT, T5, GNMT</h2>
+    <p>The 2017&ndash;2020 wave of large NLP models is, almost without exception, a TPU v2/v3 story.</p>
+
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Model</th><th>Year</th><th>Hardware</th><th>Notes</th></tr></thead>
+            <tbody>
+                <tr><td><strong>GNMT</strong> (Google Neural Machine Translation)</td><td>2016&ndash;17</td><td>v1 inference, v2 training</td><td>The migration from RNN-LSTM seq2seq to Transformer happens over the v2/v3 era.</td></tr>
+                <tr><td><strong>BERT-Base / Large</strong> (Devlin et al.)</td><td>Oct 2018</td><td>v3</td><td>Trained on a v3 pod &mdash; the paper credits "Cloud TPU v3 Pod". 4 days for BERT-Large.</td></tr>
+                <tr><td><strong>T5</strong> (Raffel et al.)</td><td>Oct 2019</td><td>v3</td><td>11B parameters at the largest. Pre-trained on 1024-chip v3 pods.</td></tr>
+                <tr><td><strong>Meena / LaMDA</strong></td><td>2020&ndash;21</td><td>v3 / early v4</td><td>Conversational models leading toward Bard/Gemini.</td></tr>
+                <tr><td><strong>MUM</strong></td><td>2021</td><td>v4</td><td>Multimodal; trained as v4 came online.</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h3>External usage</h3>
+    <p>v2 and v3 were the first TPUs sold as a product. Cloud TPU went GA in February 2018 (v2) and March 2019 (v3). The TensorFlow Research Cloud programme gave free TPU access to academic researchers; whole sub-fields of language and vision research happened on these chips. <strong>If you read a 2018&ndash;2020 paper that says "trained on Cloud TPU", it's a v2 or v3 pod.</strong></p>
+</section>
+
+<section class="slide" id="slide-11">
+    <div class="slide-number">11</div>
+    <h2>What v2/v3 Got Right And Wrong</h2>
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel g">
+            <h4>Got right</h4>
+            <ul>
+                <li>bfloat16 as the production training numeric.</li>
+                <li>Two-TensorCore-per-chip layout.</li>
+                <li>HBM at the right scale.</li>
+                <li>ICI as a custom chip-to-chip link.</li>
+                <li>The 2D torus pod &mdash; a fixed, predictable, all-reduce-friendly topology.</li>
+                <li>Cloud TPU as a rentable product.</li>
+            </ul>
+        </div>
+        <div class="diagram-panel y">
+            <h4>What v4 had to fix</h4>
+            <ul>
+                <li><strong>2D torus diameter.</strong> A 32&times;32 torus has diameter 32; for ~5,000-chip jobs this hurts. v4 moves to 3D + OCS.</li>
+                <li><strong>Embedding lookups</strong> are slow on the vector unit. v4 adds <em>SparseCore</em>.</li>
+                <li><strong>Static pod allocation.</strong> v2/v3 pods are 256 or 1024, no slicing. v4 lets you reserve sub-pod slices via OCS.</li>
+                <li><strong>Hard pod failure mode.</strong> v3 has no facility for routing around a faulty board. v4's OCS lets the system bypass any single block.</li>
+                <li><strong>16 nm.</strong> 7 nm is overdue by 2020.</li>
+            </ul>
+        </div>
+    </div>
+
+    <p>The v4 paper (ISCA 2023) is, as a result, mostly a list of "things v3 was beginning to feel painful for the team running PaLM-class workloads on it". Each item gets its own architectural fix.</p>
+</section>
+
+<section class="slide" id="slide-12">
+    <div class="slide-number">12</div>
+    <h2>Cheat Sheet</h2>
+    <ul>
+        <li><strong>v2 (2017):</strong> 16&nbsp;nm, 2 TensorCores/chip, 1 MXU each, 128&times;128 bf16, 45 TFLOPS/chip, 16 GiB HBM, 256-chip 16&times;16 2D-torus pod, ICI introduced, air-cooled.</li>
+        <li><strong>v3 (2018):</strong> Same 16&nbsp;nm, doubled MXUs per core (4/chip), 123 TFLOPS/chip, 32 GiB HBM at ~900 GB/s, 1024-chip 32&times;32 pod, first liquid-cooled TPU.</li>
+        <li><strong>bfloat16:</strong> Google Brain invention. FP32 exponent + 7-bit mantissa. Now industry-standard.</li>
+        <li><strong>HBM</strong> arrives in v2 &mdash; 17&times; v1's bandwidth, the single most important upgrade.</li>
+        <li><strong>ICI</strong> custom chip-to-chip link enables training pods. 2D torus topology.</li>
+        <li><strong>Pod-scale aggregate:</strong> v2 &asymp; 11.5 PFLOPS, v3 &asymp; 126 PFLOPS bf16.</li>
+        <li>BERT, T5, GNMT, the entire 2017&ndash;2020 NLP renaissance trained on v2/v3 pods.</li>
+        <li>Cloud TPU went GA on v2 in Feb 2018; v3 in March 2019. First time external researchers could rent TPUs by the hour.</li>
+    </ul>
+
+    <div class="callout">
+        <div class="callout-label">Read next</div>
+        <p>Deck <strong>06 &mdash; v4, OCS &amp; SparseCore</strong> covers the chip that turns the TPU pod into a true machine-learning supercomputer.</p>
+    </div>
+</section>
+
+<footer class="footer">
+    <p>Part of the <a href="https://github.com/BrendanJamesLynskey/LLM_Hub_Google_TPUs">Google TPUs</a> series. Sources: Jouppi et al., "A Domain-Specific Supercomputer for Training DNNs", CACM 2020 (10.1145/3360307); HotChips 2020 deck "Google's Training Chips: TPUv2/TPUv3" (Norrie/Patil); Google Cloud TPU v3 docs; Devlin et al., BERT (2018).</p>
+</footer>
+
+</body>
+</html>
