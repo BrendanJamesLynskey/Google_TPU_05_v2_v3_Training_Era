@@ -263,7 +263,7 @@
                 <li><strong>One MXU</strong> &mdash; 128&times;128 bf16 weight-stationary systolic.</li>
                 <li><strong>One vector unit</strong> &mdash; SIMD-style elementwise on bf16 / FP32, with reductions.</li>
                 <li><strong>One scalar unit</strong> &mdash; integer arithmetic, addresses, loop counters.</li>
-                <li><strong>VMEM</strong> &mdash; 32 MiB (v2) software-managed scratchpad for activations.</li>
+                <li><strong>VMEM</strong> &mdash; software-managed scratchpad for activations (v2 has 32 MiB of on-chip memory per chip, ~16 MiB per TensorCore).</li>
                 <li><strong>~22.5 TFLOPS bf16</strong> per TensorCore.</li>
             </ul>
         </div>
@@ -444,7 +444,7 @@
 <section class="slide" id="slide-09">
     <div class="slide-number">09</div>
     <h2>Liquid Cooling &mdash; The First Time</h2>
-    <p>v3 was the first liquid-cooled accelerator at hyperscale. Per-chip TDP estimates put v3 at 200&ndash;250 W; eight chips per board, 32 boards per rack means rack-level power dissipation past anything air-cooled would tolerate.</p>
+    <p>v3 was the first liquid-cooled accelerator at hyperscale. v3's TDP is 450 W per chip (measured production power ~175&ndash;262 W); eight chips per board, 32 boards per rack means rack-level power dissipation past anything air-cooled would tolerate.</p>
 
     <h3>The cooling stack</h3>
     <ul>
