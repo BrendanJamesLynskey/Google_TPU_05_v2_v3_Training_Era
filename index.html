@@ -247,7 +247,7 @@
 
     <div class="callout">
         <div class="callout-label">A standard born from one chip</div>
-        <p>bf16 went from "Google internal format" in 2017 to JEDEC and IEEE adoption by 2020. NVIDIA, Intel (with their Cooper Lake AVX-512 BF16 instructions), ARM (with the BFloat16 extension to ARMv8.6), AMD &mdash; all support it. The TPU forced a numeric standard on the rest of the industry.</p>
+        <p>bf16 went from "Google internal format" in 2017 to native support across the industry by 2020 (it is not an IEEE 754 format). NVIDIA, Intel (with their Cooper Lake AVX-512 BF16 instructions), ARM (with the BFloat16 extension to ARMv8.6), AMD &mdash; all support it. The TPU forced a numeric standard on the rest of the industry.</p>
     </div>
 </section>
 
@@ -296,7 +296,7 @@
             <tbody>
                 <tr><td>Capacity</td><td>8 GiB</td><td>16 GiB</td><td>32 GiB</td></tr>
                 <tr><td>Bandwidth</td><td>~34 GB/s</td><td>~600 GB/s</td><td>~900 GB/s</td></tr>
-                <tr><td>Stacks</td><td>2 channels DDR3-2133</td><td>2 stacks HBM (1 per core)</td><td>2 stacks HBM</td></tr>
+                <tr><td>Stacks</td><td>2 channels DDR3-2133</td><td>2 stacks HBM (1 per core)</td><td>4 stacks HBM (2 per core)</td></tr>
                 <tr><td>Bandwidth uplift vs v1</td><td>1.0&times;</td><td><strong>~17.6&times;</strong></td><td>~26.5&times;</td></tr>
             </tbody>
         </table>
@@ -324,7 +324,7 @@
     <h3>ICI v2 specs</h3>
     <ul>
         <li><strong>4 bidirectional links per chip</strong>, one to each cardinal-direction neighbour (north, south, east, west) for 2D-torus connectivity.</li>
-        <li>~62 GB/s aggregate per chip (HotChips 2020 figures; per-link bandwidth in the tens of GB/s range).</li>
+        <li>~62 GB/s per link (496 Gbit/s); 4 links give ~250 GB/s per chip. v3 raised this to 4 links at ~70&ndash;82 GB/s.</li>
         <li>Custom Google SerDes &mdash; not InfiniBand, not Ethernet, not NVLink. Co-designed with the routing fabric for low-latency torus all-reduce.</li>
         <li>Hardware all-reduce primitives in the link controller, not the chip core.</li>
     </ul>
@@ -351,7 +351,7 @@
 <section class="slide" id="slide-07">
     <div class="slide-number">07</div>
     <h2>The 2D Torus Pod</h2>
-    <p>v2 ships with a fixed pod shape: <strong>256 chips arranged in a 16&times;16 2D torus</strong>, 4 chips per board, 16 boards per rack-scale pod.</p>
+    <p>v2 ships with a fixed pod shape: <strong>256 chips arranged in a 16&times;16 2D torus</strong>, 4 chips per board, 64 boards per pod.</p>
 
     <div class="canvas-wrap">
         <svg viewBox="0 0 600 380" width="600" height="380" xmlns="http://www.w3.org/2000/svg">
@@ -472,7 +472,7 @@
             <thead><tr><th>Model</th><th>Year</th><th>Hardware</th><th>Notes</th></tr></thead>
             <tbody>
                 <tr><td><strong>GNMT</strong> (Google Neural Machine Translation)</td><td>2016&ndash;17</td><td>v1 inference, v2 training</td><td>The migration from RNN-LSTM seq2seq to Transformer happens over the v2/v3 era.</td></tr>
-                <tr><td><strong>BERT-Base / Large</strong> (Devlin et al.)</td><td>Oct 2018</td><td>v3</td><td>Trained on a v3 pod &mdash; the paper credits "Cloud TPU v3 Pod". 4 days for BERT-Large.</td></tr>
+                <tr><td><strong>BERT-Base / Large</strong> (Devlin et al.)</td><td>Oct 2018</td><td>Cloud TPU</td><td>Trained on Cloud TPUs in Pod configuration &mdash; 64 TPU chips for BERT-Large, 4 days (the paper does not name the TPU generation).</td></tr>
                 <tr><td><strong>T5</strong> (Raffel et al.)</td><td>Oct 2019</td><td>v3</td><td>11B parameters at the largest. Pre-trained on 1024-chip v3 pods.</td></tr>
                 <tr><td><strong>Meena / LaMDA</strong></td><td>2020&ndash;21</td><td>v3 / early v4</td><td>Conversational models leading toward Bard/Gemini.</td></tr>
                 <tr><td><strong>MUM</strong></td><td>2021</td><td>v4</td><td>Multimodal; trained as v4 came online.</td></tr>
@@ -481,7 +481,7 @@
     </div>
 
     <h3>External usage</h3>
-    <p>v2 and v3 were the first TPUs sold as a product. Cloud TPU went GA in February 2018 (v2) and March 2019 (v3). The TensorFlow Research Cloud programme gave free TPU access to academic researchers; whole sub-fields of language and vision research happened on these chips. <strong>If you read a 2018&ndash;2020 paper that says "trained on Cloud TPU", it's a v2 or v3 pod.</strong></p>
+    <p>v2 and v3 were the first TPUs sold as a product. Cloud TPU entered beta in February 2018 (v2); v3 followed in 2019. The TensorFlow Research Cloud programme gave free TPU access to academic researchers; whole sub-fields of language and vision research happened on these chips. <strong>If you read a 2018&ndash;2020 paper that says "trained on Cloud TPU", it's a v2 or v3 pod.</strong></p>
 </section>
 
 <section class="slide" id="slide-11">
@@ -525,7 +525,7 @@
         <li><strong>ICI</strong> custom chip-to-chip link enables training pods. 2D torus topology.</li>
         <li><strong>Pod-scale aggregate:</strong> v2 &asymp; 11.5 PFLOPS, v3 &asymp; 126 PFLOPS bf16.</li>
         <li>BERT, T5, GNMT, the entire 2017&ndash;2020 NLP renaissance trained on v2/v3 pods.</li>
-        <li>Cloud TPU went GA on v2 in Feb 2018; v3 in March 2019. First time external researchers could rent TPUs by the hour.</li>
+        <li>Cloud TPU entered beta on v2 in Feb 2018; v3 followed in 2019. First time external researchers could rent TPUs by the hour.</li>
     </ul>
 
     <div class="callout">
